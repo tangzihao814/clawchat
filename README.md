@@ -1,86 +1,152 @@
-# ClawChat MVP
+# ClawChat
 
-一个最小可用的网页聊天项目，分为 **管理员** 和 **普通用户** 两种角色。
+ClawChat is a lightweight web chat project with **admin** and **user** roles.
 
-## 功能
+It is designed as a simple MVP for running a browser-based chat system where:
 
-### 普通用户
-- 用户名/密码登录
-- 登录后直接进入绑定的聊天会话
-- 查看当前绑定的 session
-- 退出登录
+- regular users log in and enter their own dedicated chat session
+- administrators can manage accounts, reset passwords, and control user access
+- the app can be deployed behind a reverse proxy such as **Caddy**
 
-### 管理员
-- 管理员登录
-- 查看所有账号
-- 创建普通用户账号
-- 启用 / 禁用用户
-- 重置用户密码
-- 以管理员身份进入聊天页
+## Features
 
-## 技术栈
-- Node.js
-- Express
-- Cookie Session（内存态）
-- JSON 文件存储用户
-- 纯 HTML / CSS / JS 前端
+### User side
+- Username/password login
+- Direct access to a bound chat session after login
+- Session-aware chat page entry
+- Logout support
 
-## 目录
+### Admin side
+- Admin login
+- View all users
+- Create new user accounts
+- Enable / disable users
+- Reset user passwords
+- Enter the admin chat page
 
-- `server.js`：后端服务
-- `public/index.html`：前端页面
-- `users.json`：用户数据
+## Tech Stack
 
-## 启动
+- **Node.js**
+- **Express**
+- **Cookie-based session auth** (in-memory)
+- **JSON file storage** for user records
+- **Vanilla HTML / CSS / JavaScript** frontend
+
+## Project Structure
+
+```text
+clawchat/
+├── public/
+│   └── index.html
+├── server.js
+├── users.json
+├── package.json
+├── run.sh
+└── README.md
+```
+
+## Quick Start
+
+### 1. Install dependencies
 
 ```bash
-cd clawchat
 npm install
+```
+
+### 2. Start the app
+
+```bash
 npm start
 ```
 
-默认监听：
+By default it runs on:
+
 - `HOST=0.0.0.0`
 - `PORT=2000`
 
-可自定义：
+You can also run it with custom environment variables:
 
 ```bash
-HOST=0.0.0.0 PORT=2000 npm start
+HOST=127.0.0.1 PORT=2000 OPENCLAW_BASE=https://pl.tangzh.top npm start
 ```
 
-## 登录说明
+## Environment Variables
 
-初始管理员账号写在 `users.json` 里。
+| Name | Default | Description |
+|---|---|---|
+| `HOST` | `0.0.0.0` | Bind address |
+| `PORT` | `2000` | Service port |
+| `OPENCLAW_BASE` | `https://pl.tangzh.top` | Upstream chat panel base URL |
 
-当前默认：
-- 用户名：`admin`
-- 密码：请按你现有配置使用，或直接替换 `users.json` 中的 hash
+## Authentication Model
 
-## 接口
+- Sessions are stored in memory
+- Login state is tracked by the `clawchat_session` cookie
+- User data is stored in `users.json`
+- Passwords are stored as bcrypt hashes
 
-### 认证
+## API Endpoints
+
+### Health
 - `GET /api/health`
+
+### Auth
 - `GET /api/auth/me`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 
-### 管理员
+### Admin
 - `GET /api/admin/users`
 - `POST /api/admin/users`
 - `PATCH /api/admin/users/:id/enabled`
 - `PATCH /api/admin/users/:id/password`
 
-### 聊天跳转
+### Chat bootstrap
 - `GET /api/chat/bootstrap`
 
-## 后续建议
+## Deployment
 
-如果你准备把它做成正式项目，下一步建议按这个顺序升级：
+A typical production setup is:
 
-1. 换成 PostgreSQL
-2. 会话改成 Redis / DB 持久化
-3. 接入真正的消息存储
-4. 增加注册、邀请码、套餐额度
-5. 增加管理员审计日志
-6. 用 Next.js 或 Vue 重写前端
+- run ClawChat as a `systemd` service
+- bind it to `127.0.0.1:2000`
+- expose it through **Caddy** with HTTPS
+
+Example Caddy config:
+
+```caddy
+chat.example.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:2000
+}
+```
+
+## Limitations
+
+This repository is intentionally minimal and currently uses:
+
+- in-memory sessions
+- JSON file storage instead of a database
+- a simple single-page frontend
+
+For a larger production system, the next recommended upgrades are:
+
+- PostgreSQL or MySQL for persistence
+- Redis-backed session storage
+- real message persistence
+- audit logs
+- invitation / registration flow
+- usage quotas or billing
+
+## Roadmap
+
+- [ ] Persistent chat history
+- [ ] Better admin dashboard
+- [ ] Invite-based registration
+- [ ] Role/permission expansion
+- [ ] Database-backed storage
+- [ ] Multi-model support
+
+## License
+
+Currently not specified.
