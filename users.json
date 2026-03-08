@@ -1,0 +1,26 @@
+{
+  "users": [
+    {
+      "id": "admin_root",
+      "role": "admin",
+      "username": "admin",
+      "displayName": "管理员",
+      "passwordHash": "$2a$10$cShMc5mB0G0C2/ibHNZZe.dhZRgFxcmEFQKsvsGbM4KGapc7e75FG",
+      "session": null,
+      "enabled": true,
+      "createdAt": "2026-03-08T13:58:00Z",
+      "lastLoginAt": "2026-03-08T14:06:25.720Z"
+    },
+    {
+      "id": "user_syq",
+      "role": "user",
+      "username": "syq",
+      "displayName": "syq",
+      "passwordHash": "$2a$10$Ii77xOlcu2v/MeenN30me.WhhJhPgqtpSiYnBa8zZ4sCGOgyMy532",
+      "session": "friend-syq",
+      "enabled": true,
+      "createdAt": "2026-03-08T14:06:25.804Z",
+      "lastLoginAt": "2026-03-08T14:14:45.201Z"
+    }
+  ]
+}

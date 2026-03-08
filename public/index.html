@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClawChat</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #fff; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+    .card { background: #171a21; border: 1px solid #2a2f3a; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    h1, h2, h3, p { margin-top: 0; }
+    input, button { font: inherit; }
+    input {
+      width: 100%;
+      margin-top: 8px;
+      margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #0f1115;
+      color: #fff;
+    }
+    button {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 0;
+      background: #5b7cff;
+      color: white;
+      cursor: pointer;
+    }
+    button.secondary { background: #2a2f3a; }
+    button.danger { background: #a53c3c; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row > * { flex: 1 1 180px; }
+    .hidden { display: none !important; }
+    .muted { color: #99a1b3; }
+    .err { color: #ff7b7b; margin-top: 8px; }
+    .ok { color: #78dca0; margin-top: 8px; }
+    .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .user-list { margin-top: 12px; display: grid; gap: 12px; }
+    .user-item { padding: 16px; border: 1px solid #2a2f3a; border-radius: 14px; background: #12151c; }
+    .user-meta { margin-top: 8px; color: #99a1b3; font-size: 14px; line-height: 1.6; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #263042;
+      color: #c9d7ff;
+      margin-left: 8px;
+    }
+    .badge.off { background: #3a2525; color: #ffb4b4; }
+    .fullpage { position: fixed; inset: 0; background: #0b0d12; }
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid #2a2f3a;
+      background: #11151d;
+      gap: 16px;
+    }
+    .iframe-wrap { position: absolute; top: 57px; left: 0; right: 0; bottom: 0; }
+    iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+    code { background: #0f1115; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap hidden" id="app-wrap">
+    <div class="card" id="login-card">
+      <h2>ClawChat 登录</h2>
+      <p class="muted">普通用户登录后直接进入自己的聊天页，管理员登录后进入后台管理。</p>
+      <input id="username" placeholder="用户名" />
+      <input id="password" placeholder="密码" type="password" />
+      <button id="login-btn">登录</button>
+      <div id="login-err" class="err"></div>
+    </div>
+
+    <div class="card hidden" id="admin-card">
+      <div class="toolbar">
+        <div>
+          <h2 style="margin-bottom:6px">管理员后台</h2>
+          <div class="muted">管理用户账号，并将每个账号绑定到独立聊天 session。</div>
+        </div>
+        <div class="row" style="flex:0 0 auto">
+          <button class="secondary" id="admin-open-chat">进入聊天页</button>
+          <button class="secondary" id="admin-logout-btn">退出登录</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:0; background:#12151c; border-color:#222937;">
+        <h3>创建用户</h3>
+        <div class="row">
+          <input id="new-username" placeholder="新用户名" />
+          <input id="new-display" placeholder="显示名（可选）" />
+          <input id="new-password" placeholder="初始密码" type="password" />
+          <input id="new-session" placeholder="绑定 session，默认 friend-用户名" />
+        </div>
+        <div class="row" style="margin-top: 4px;">
+          <button id="create-user">创建账号</button>
+        </div>
+        <div id="admin-err" class="err"></div>
+        <div id="admin-ok" class="ok"></div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <h3 style="margin:0">用户列表</h3>
+        <div class="muted">管理员账号不会显示管理按钮。</div>
+      </div>
+      <div class="user-list" id="user-list"></div>
+    </div>
+  </div>
+
+  <div class="fullpage hidden" id="chat-page">
+    <div class="topbar">
+      <div>
+        <strong id="chat-title">ClawChat</strong>
+        <span class="muted" id="chat-session-label" style="margin-left:10px"></span>
+      </div>
+      <div class="row" style="flex:0 0 auto; min-width:auto;">
+        <button class="secondary" id="back-admin-btn">返回管理台</button>
+        <button class="secondary" id="logout-chat-btn">退出登录</button>
+      </div>
+    </div>
+    <div class="iframe-wrap">
+      <iframe id="chat-frame" referrerpolicy="no-referrer"></iframe>
+    </div>
+  </div>
+
+  <script>
+    async function api(url, options={}) {
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || '请求失败');
+      return data;
+    }
+
+    const appWrap = document.getElementById('app-wrap');
+    const loginCard = document.getElementById('login-card');
+    const adminCard = document.getElementById('admin-card');
+    const chatPage = document.getElementById('chat-page');
+    const loginErr = document.getElementById('login-err');
+    const adminErr = document.getElementById('admin-err');
+    const adminOk = document.getElementById('admin-ok');
+
+    function clearAdminTips() {
+      adminErr.textContent = '';
+      adminOk.textContent = '';
+    }
+
+    function showLogin() {
+      appWrap.classList.remove('hidden');
+      loginCard.classList.remove('hidden');
+      adminCard.classList.add('hidden');
+      chatPage.classList.add('hidden');
+    }
+
+    function showAdmin() {
+      appWrap.classList.remove('hidden');
+      loginCard.classList.add('hidden');
+      adminCard.classList.remove('hidden');
+      chatPage.classList.add('hidden');
+    }
+
+    function showChat(info) {
+      appWrap.classList.add('hidden');
+      chatPage.classList.remove('hidden');
+      document.getElementById('chat-title').textContent = info.user.displayName || info.user.username || 'ClawChat';
+      document.getElementById('chat-session-label').textContent = info.session ? `session: ${info.session}` : '';
+      document.getElementById('back-admin-btn').style.display = info.user.role === 'admin' ? '' : 'none';
+      document.getElementById('chat-frame').src = info.targetUrl;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+    }
+
+    async function setEnabled(id, enabled) {
+      clearAdminTips();
+      await api(`/api/admin/users/${id}/enabled`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled })
+      });
+      adminOk.textContent = enabled ? '用户已启用' : '用户已禁用';
+      await loadUsers();
+    }
+
+    async function resetPassword(id, username) {
+      clearAdminTips();
+      const password = window.prompt(`给用户 ${username} 设置新密码`);
+      if (!password) return;
+      await api(`/api/admin/users/${id}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ password })
+      });
+      adminOk.textContent = `已重置 ${username} 的密码`;
+    }
+
+    async function loadUsers() {
+      const res = await api('/api/admin/users');
+      const el = document.getElementById('user-list');
+      el.innerHTML = res.users.map(u => {
+        const isAdmin = u.role === 'admin';
+        return `
+          <div class="user-item">
+            <div>
+              <strong>${escapeHtml(u.username)}</strong>
+              <span class="badge ${u.enabled ? '' : 'off'}">${u.enabled ? '启用中' : '已禁用'}</span>
+            </div>
+            <div class="user-meta">
+              显示名：${escapeHtml(u.displayName || u.username)}<br>
+              角色：${escapeHtml(u.role)}<br>
+              session：<code>${escapeHtml(u.session || 'admin')}</code><br>
+              创建时间：${escapeHtml(u.createdAt || '-')}<br>
+              最近登录：${escapeHtml(u.lastLoginAt || '-')}
+            </div>
+            ${isAdmin ? '' : `
+              <div class="actions">
+                <button class="secondary" onclick="resetPassword('${u.id}', '${escapeHtml(u.username)}')">重置密码</button>
+                ${u.enabled
+                  ? `<button class="danger" onclick="setEnabled('${u.id}', false)">禁用</button>`
+                  : `<button onclick="setEnabled('${u.id}', true)">启用</button>`}
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function routeByMe() {
+      const me = await api('/api/auth/me');
+      if (!me.user) return showLogin();
+      if (me.user.role === 'admin') {
+        showAdmin();
+        return loadUsers();
+      }
+      const info = await api('/api/chat/bootstrap');
+      return showChat(info);
+    }
+
+    document.getElementById('login-btn').onclick = async () => {
+      loginErr.textContent = '';
+      try {
+        const res = await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+          })
+        });
+        if (res.user.role === 'admin') {
+          showAdmin();
+          await loadUsers();
+        } else {
+          const info = await api('/api/chat/bootstrap');
+          showChat(info);
+        }
+      } catch (e) {
+        loginErr.textContent = e.message;
+      }
+    };
+
+    document.getElementById('create-user').onclick = async () => {
+      clearAdminTips();
+      try {
+        await api('/api/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: document.getElementById('new-username').value,
+            displayName: document.getElementById('new-display').value,
+            password: document.getElementById('new-password').value,
+            session: document.getElementById('new-session').value,
+          })
+        });
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-display').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('new-session').value = '';
+        adminOk.textContent = '用户创建成功';
+        await loadUsers();
+      } catch (e) {
+        adminErr.textContent = e.message;
+      }
+    };
+
+    document.getElementById('admin-open-chat').onclick = async () => {
+      const info = await api('/api/chat/bootstrap');
+      showChat(info);
+    };
+
+    async function logout() {
+      await api('/api/auth/logout', { method: 'POST' });
+      document.getElementById('chat-frame').src = 'about:blank';
+      showLogin();
+    }
+
+    document.getElementById('admin-logout-btn').onclick = logout;
+    document.getElementById('logout-chat-btn').onclick = logout;
+    document.getElementById('back-admin-btn').onclick = () => routeByMe();
+
+    routeByMe().catch(() => showLogin());
+    window.setEnabled = setEnabled;
+    window.resetPassword = resetPassword;
+  </script>
+</body>
+</html>
